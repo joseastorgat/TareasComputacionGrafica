@@ -12,7 +12,7 @@ import tqdm
 import numpy as np
 import math
 
-class Playa:
+class Litoral:
     def __init__(self, ancho=4000, alto=2000, dh = 10, RRR=103, omega = 1):
         """
         Constructor
@@ -35,6 +35,8 @@ class Playa:
         self._geografia = np.zeros((self._h, self._w))
         self._matrix = np.zeros((self._h, self._w))
 
+    def reset(self):
+        self.__init__(self._ancho, self._alto, self._dh)
 
     def get_omega_optimo(self):
         m = self._h
@@ -42,19 +44,20 @@ class Playa:
         a = 2.0 + math.sqrt( 4.0 - (math.cos(math.pi/(n-1.0)) + math.cos(math.pi/(m-1.0)))**2)      
         self.omega = 4.0/a
         print(self.omega)
-    
-    def reset(self):
-        self.__init__(self._ancho, self._alto, self._dh)
-
 
     def set_geografia(self):
+        """
+        Construye la geografia del Litoral
+        :return:
+        """
+
+
         _p1 = ( (1200.0 + 400.0*self._rrr), 0) #comienzo de playa y fabrica
         _p2 = ( _p1[0] + 120.0, 0) # fin playa y fabrica, comienzo elevación
         _p3 = ( _p1[0] + 400.0, (_p1[0] + 400.0 -_p2[0])*(100.0/300.0)) # fin elevacion suave, comienzo montaña 1
         _p4 = ( _p3[0] + 800.0, (1500.0 + 200.0*self._rrr)) # pico montaña 1
         _p5 = ( _p4[0] + 300.0, (1300.0 + 200.0*self._rrr)) # valle entre montañas
         _p6 = ( _p4[0] + 800.0, (1850.0 + 100.0*self._rrr)) # pico montaña 2
-
 
         p1 = (int(_p1[0]/self._dh), int(_p1[1]/self._dh))
         p2 = (int(_p2[0]/self._dh), int(_p2[1]/self._dh))
@@ -67,7 +70,7 @@ class Playa:
         snow = int(1800.0/self._dh) # altura de nieve > 1800
         fab_h = int(math.ceil(20.0/self._dh)) #altura de la fabrica es 20m
 
-
+        self.puntos = {"p1" : p1, "p2" : p2, "p3" : p3, "p4" : p4, "p5" : p5, "p6" : p6, "p7" : p7, "snow" : snow, "fabrica_h":fab_h} 
         self._geografia[0,p1[0]:p3[0]] = 3
         
         for x in range(0,self._w):
@@ -93,8 +96,7 @@ class Playa:
                 n = p4[1]
                 m = float(p5[1] - p4[1])/float(p5[0]-p4[0])
                 y = int(n + m*(x-p4[0]))
-                self._geografia[0:y,x] = 3#Tierr
-
+                self._geografia[0:y,x] = 3#Tierra
 
             elif x < p6[0]:
                 n = p5[1]
@@ -104,8 +106,8 @@ class Playa:
                     self._geografia[snow:y,x] = 4#Nieve
                     self._geografia[0:snow,x] = 3#Tierra
                 else:
-                    self._geografia[0:y,x] = 3#Tierr
-            
+                    self._geografia[0:y,x] = 3#Tierra
+
             else:
                 n = p6[1]
                 m = float(p7[1] - p6[1])/float(p7[0]-p6[0])
@@ -114,17 +116,16 @@ class Playa:
                     self._geografia[snow:y,x] = 4#Nieve
                     self._geografia[0:snow,x] = 3#Tierra
                 else:
-                    self._geografia[0:y,x] = 3#Tierr
-
-
+                    self._geografia[0:y,x] = 3#Tierra
         return
 
     def cb(self, hora=0.0):
         """
         Pone cond borde
-        :param t: Tiempo
+        :param hora: Hora
         :return:
         """
+
         # Playa-Mar:
         if hora>=0.0 and hora<8.0:
             M  = 4.0
@@ -180,17 +181,20 @@ class Playa:
     def __fix_plot(self):
         """
         Convierte a Nan los elementos de la geografía (cerros, fabrica, mar, nieve) ,de esta manera se puede observar de mejor la temperatura de la atmosfera
-
+        return: none
         """
         for y in range(0,self._h):
             for x in range(1,self._w):
                 if self._geografia[y,x] != 0: #No atmosfera
                     self._matrix[y,x] = None
-    
+        return 
     def plot(self):
+        """
+        Grafica la temperatura actual
+        """
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
-
         # Se agrega grafico al plot
         cax = ax.imshow(self._matrix, interpolation='none', origin="lower")
         fig.colorbar(cax)
@@ -199,30 +203,30 @@ class Playa:
 
 
     def plot_log_scale(self):
+        """
+        Grafica la temperatura actual con colores en escala logaritmica 
+        return: none
+        """
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        
         ymax = np.nanmax(self._matrix)
         xmax = math.log(ymax,10)
-
-        print xmax
         bounds = np.hstack((np.array([-10, 0]),np.logspace(1,xmax,25, endpoint=True)))
-
         norm = color.BoundaryNorm(boundaries=bounds, ncolors=256)
-
-        
         # Se agrega grafico al plot
         cax = ax.imshow(self._matrix, interpolation='none', origin="lower", norm =norm)
         cb = fig.colorbar(cax, norm=norm, boundaries=bounds)
-
         # even bounds gives a contour-like effect
-
-
         plt.show()
-
         return
 
     def show_map(self): 
+        """
+        Grafica la temperatura actual con colores en escala logaritmica 
+        return: none
+        """
+
         fig = plt.figure()
         ax = fig.add_subplot(111)
         #colorbar customization
@@ -235,7 +239,7 @@ class Playa:
         plt.show()    
         return True
     
-    def start(self, iteraciones=1000):
+    def start(self, iteraciones=1000, func = self.rho1):
         for _ in tqdm.tqdm(range(iteraciones)): #1000 iteraciones
             for x in range(1, self._w-1):
                 for y in range(self._h-2, 0 ,-1):
@@ -247,34 +251,39 @@ class Playa:
                         aux = self._matrix[y,x] + self.omega*(0.25*self._matrix[y-1,x] + 0.25*self._matrix[y+1,x] + 0.25*self._matrix[y,x+1] + 0.25*self._matrix[y,x-1] - self._matrix[y,x])
                         self._matrix[y,x] = aux
         return
-    
     def imprime(self):
         print(self._matrix)
 
+    def func(i,j, rho):
+
+        if i == 0:
+
+        elif i == self._w-1:
+
+        elif j == 0:
+
+        elif j == self._h-1:
+
+
+        #Casos Generales:
+
+        if self._geografia[j,i] !=0:
+            return None
+
+        else:
+            if self._geografia[j-1, i] !=0:
+
+            # elif self._geografia[j+1, i] !=0:
+
+            elif self._geografia[j, i-1] !=0:
+
+
+
+
 
     def rho1(i,j):
-        return
 
+        return self._matrix[y,x] + self.omega*(0.25*self._matrix[y-1,x] + 0.25*self._matrix[y+1,x] + 0.25*self._matrix[y,x+1] + 0.25*self._matrix[y,x-1] - self._matrix[y,x])
 
-    
     def rho2(i,j):
         return
-
-
-
-
-def test():
-    r = Playa(ancho=4000, alto=2000, dh = 20, RRR=103, omega = 1)
-    r.get_omega_optimo()
-    r.set_geografia()
-    r.cb()
-    r.plot()
-    r.start(500)
-    r.plot()
-    return r
-def main():
-    # Instancia rio
-    return 
-
-if __name__ == '__main__':
-    test() 
