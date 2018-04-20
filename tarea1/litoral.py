@@ -12,6 +12,13 @@ import tqdm
 import numpy as np
 import math
 
+
+def rho1(i,j):
+    return 0
+
+def rho2(i,j,):
+    return 1.0/(math.sqrt(( float(i)**2+ float(j)**2 + 120.0 )))
+
 class Litoral:
     def __init__(self, ancho=4000, alto=2000, dh = 10, RRR=103, omega = 1):
         """
@@ -178,7 +185,7 @@ class Litoral:
         return 
  
     
-    def __fix_plot(self):
+    def _fix_plot(self):
         """
         Convierte a Nan los elementos de la geografía (cerros, fabrica, mar, nieve) ,de esta manera se puede observar de mejor la temperatura de la atmosfera
         return: none
@@ -239,51 +246,78 @@ class Litoral:
         plt.show()    
         return True
     
-    def start(self, iteraciones=1000, func = self.rho1):
+    def start(self, iteraciones=1000, func = rho1, e0=0.001):
         for _ in tqdm.tqdm(range(iteraciones)): #1000 iteraciones
-            for x in range(1, self._w-1):
+            e = 0
+            for x in range(1, self._w-1): # al iterar no se consideran las condiciones de dirichlet (bordes)
                 for y in range(self._h-2, 0 ,-1):
                     
                     if self._geografia[y,x] != 0 :
                         break
                     
                     elif self._geografia[y,x] == 0:
-                        aux = self._matrix[y,x] + self.omega*(0.25*self._matrix[y-1,x] + 0.25*self._matrix[y+1,x] + 0.25*self._matrix[y,x+1] + 0.25*self._matrix[y,x-1] - self._matrix[y,x])
-                        self._matrix[y,x] = aux
+                        self._matrix[y,x], _e  = self.faux(x,y, func)
+                        e+=_e
+        
+            # if e < e0:
+                # print("break in iteration: "+str(_))
+                # break
         return
     def imprime(self):
         print(self._matrix)
 
-    def func(i,j, rho):
 
-        if i == 0:
+    def faux(self, i,j, rho = rho1):
 
-        elif i == self._w-1:
+        uij = self._matrix[j,i]
+        rij = -4*self._matrix[j,i]
 
-        elif j == 0:
 
-        elif j == self._h-1:
+        #revision si se encuentra sobre un condicion de borde ( no es posible abajo)
+        if (self._geografia[j-1,i] != 0 and self._geografia[j-1,i]!=2)or np.isnan(self._matrix[j-1,i]):
+    
+            rij+= 2*self._matrix[j+1,i]
+        
+        else:
+            rij+=(self._matrix[j-1,i]+self._matrix[j+1,i])
 
+        #revision de si se encuentra a izquierda o derecha de una condicion de borde (no es posible en ambos)
+        
+        if self._geografia[j,i-1] !=0 or np.isnan(self._matrix[j,i-1]):
+            rij+= 2*self._matrix[j,i+1]
+
+        elif self._geografia[j,i+1] !=0 or np.isnan(self._matrix[j,i+1]):
+            rij+= 2*self._matrix[j,i-1]
+        
+        else:
+            rij+=(self._matrix[j,i-1] + self._matrix[j,i+1])
+
+        print -rho(i*self._dh,j*self._dh)
+        rij+= -rho(i*self._dh,j*self._dh)*(self._dh**2)
+
+        uij+= self.omega*rij/4.0
+
+        e = self._matrix[j,i] - uij
+
+        return uij, e
+
+    # def func(i,j, rho = self.rho1):
 
         #Casos Generales:
 
-        if self._geografia[j,i] !=0:
-            return None
+        # if self._geografia[j-1, i] !=0:
 
-        else:
-            if self._geografia[j-1, i] !=0:
-
-            # elif self._geografia[j+1, i] !=0:
-
-            elif self._geografia[j, i-1] !=0:
+        #     if self._geografia[j,i-1] !=0:
 
 
+        #     elif self._geografia[j,i+1] != 0:
+
+        #     else:
 
 
+        # elif self._geografia[j, i-1] !=0:
 
-    def rho1(i,j):
+        # elif self._geografia[j, i+1] !=0:
 
-        return self._matrix[y,x] + self.omega*(0.25*self._matrix[y-1,x] + 0.25*self._matrix[y+1,x] + 0.25*self._matrix[y,x+1] + 0.25*self._matrix[y,x-1] - self._matrix[y,x])
-
-    def rho2(i,j):
-        return
+        # else:
+        #     aux  = self._matrix[y,x] + self.omega*(self._matrix[y-1,x] + self._matrix[y+1,x] + self._matrix[y,x+1] + self._matrix[y,x-1] - 4*self._matrix[y,x] - rho(x.y)*(self._dh**2))/4.0
