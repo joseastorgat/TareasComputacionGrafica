@@ -15,12 +15,12 @@ import sys
 def rho1(i,j):
     return 0
 
-def rho2(i,j,):
+def rho2(i,j):
     return 1.0/(math.sqrt(( float(i)**2+ float(j)**2 + 120.0 )))
 
 class Litoral:
         #medidas litoral
-    def __init__(self, dh = 20, RRR=103, scale = 0.025):
+    def __init__(self, dh = 25, RRR=103, scale = 0.01):
         """
         Constructor
         :param ancho: Ancho
@@ -56,12 +56,7 @@ class Litoral:
         print("Alto Matriz: {0}".format(self._h))
         print("RRR: {0}".format(RRR))
         print("### ### ### ")
-
         self.set_geografia()
-
-    def reset(self):
-        self.__init__(self.__dh,self._RRR, self.scale)
-
 
     def set_geografia(self):
         """
@@ -84,17 +79,22 @@ class Litoral:
         p7 = (self._w - 1 , int(self._h/2))
 
         snow = int(1800.0*self.scale/self._dh) # altura de nieve > 1800
-        fab_h = int(math.ceil(20.0*self.scale/self._dh)) #altura de la fabrica es 20m
+        fab_h = 1  #altura de la fabrica es 1 grilla
 
         self.puntos = {"p1" : p1, "p2" : p2, "p3" : p3, "p4" : p4, "p5" : p5, "p6" : p6, "p7" : p7} 
-        self._geografia[0,p1[0]:p3[0]] = 3
+        
+        self.puntos_metros = {"_p1" : _p1, "_p2" : _p2, "_p3" : _p3, "_p4" : _p4, "_p5" : _p5, "_p6" : _p6} 
+        self.snow = snow
+
+        self._geografia[0,p1[0]:p3[0]] = 3 #tierra
         
         for x in range(0,self._w):
             if x < p1[0]:
                 self._geografia[0,x] = 1 # Agua 
             
             elif x < p2[0]: 
-                self._geografia[1:1+fab_h,x] = 2 #fabrica, altura 20 m
+                # self._geografia[0,x] = 3 #tierra 
+                self._geografia[fab_h,x] = 2 #fabrica
 
             elif x < p3[0]:
                 n = p2[1]
@@ -145,41 +145,21 @@ class Litoral:
         # Playa-Mar:
 
         print("### Estableciendo condiciones iniciales ### ")
-        print("### Hora actual: " + str(hora) + " ### ")
+        print("### Hora actual: " + hora_string(hora) + " ### ")
         self.hora = hora
 
-        if hora>=0.0 and hora<8.0:
-            M  = 4.0
-
-        elif hora>=8.0 and hora<16.0:
-            n = 4.0
-            m = (20.0-4.0)/(16.0-8.0)
-            M = m*(hora-8.0)+n
-        
-        elif hora>=16.0:
-            n = 20.0
-            m = (4.0-20.0)/(20.0-16.0)
-            M = m*(hora-16.0)+n
-
-        print("Temperatura Mar actual: "+ str(M))
-
-        self.cb_general(M)
-        self.cb_atmosfera(M)
-
-        print("Temperatura Atmosfera 1000 [m]: "+ str(M - (1000) *(6.0/1000.0)))
-        print("Temperatura Atmosfera 2000 [m]: "+ str(M - (2000) *(6.0/1000.0)))
+        self.cb_general()
+        self.cb_atmosfera()
         return 
- 
-    
 
-    def cb_general(self, M):
+    def cb_general(self):
 
         #Tierra:
         T = 20.0
-        #Nievesss
+        #Nieves
         N = 0.0
-        #Fabrica
-        F = 450*(math.cos((math.pi/12)*self.hora)+2)
+        M = temp_mar(self.hora)
+        F = temp_chimenea(self.hora)
 
         self.emision = F
 
@@ -188,7 +168,7 @@ class Litoral:
                 if self._geografia[y,x] == 1: #Mar
                     self._matrix[y,x] = M
                 
-                elif self._geografia[y,x] == 2: #Fabrica
+                elif self._geografia[y,x] == 2: #Planta
                     self._matrix[y,x] = F
                 
                 elif self._geografia[y,x] == 3: #Tierra
@@ -197,19 +177,24 @@ class Litoral:
                 elif self._geografia[y,x] == 4: #Nieve
                     self._matrix[y,x] = N
 
-        print("Temperatura en Fabrica: " +str(F))
         print("Temperatura en Tierra: " +str(T))
         print("Temperatura en Nieve: " +str(N))
+        print("Temperatura Mar actual: "+ str(M))
+        print("Temperatura en Planta: " +str(F))
         return 
 
 
-    def cb_atmosfera(self, M ):
+    def cb_atmosfera(self):
+        M = temp_mar(self.hora)
 
         for y in range(0,self._h):
             temp = M - (6.0/1000.0)*(y*self._dh/self.scale)
             for x in range(0,self._w):
                 if self._geografia[y,x] == 0: #atmosfera
                     self._matrix[y,x] = temp
+
+        print("Temperatura Atmosfera 1000 [m]: "+ str(M - (1000) *(6.0/1000.0)))
+        print("Temperatura Atmosfera 2000 [m]: "+ str(M - (2000) *(6.0/1000.0)))
         return
 
     def geografia_to_nan(self):
@@ -229,14 +214,18 @@ class Litoral:
         Grafica la temperatura actual con colores en escala logaritmica 
         return: none
         """
+        if omega>2 and omega<0:
+            return 
+
         self.last_omega = omega
+        
         if max_iteraciones ==0 and e0 ==0:
             print "Error: Debe haber una cantidad máxima de iteraciones o un e0>0 !!"
+        
         print('##### Inicio de Iteraciones ##### \n##### e0 : {0} -- omega:{1} -- iteraciones maximas : {2}  ######'.format(e0, omega, max_iteraciones))
         print('')
         
         cont = 0
-
         init = time.time()
 
         while True: #1000 iteraciones
@@ -250,9 +239,9 @@ class Litoral:
                     elif self._geografia[y,x] == 0:
                         
                         # a1,e1 = self.faux(x,y,func)
-                        a2,e2 = self.faux2(x,y,func, omega)
+                        a1,e1 = self.faux(x,y,func, omega)
                         
-                        self._matrix[y,x], _e  = a2,e2
+                        self._matrix[y,x], _e  = a1,e1
                         e = max(e,_e)
             cont+=1        
             
@@ -274,38 +263,7 @@ class Litoral:
                 return cont, fin
 
 
-    # def faux(self, i,j, rho = rho1):
-
-    #     uij = self._matrix[j,i]
-    #     rij = -4*self._matrix[j,i]
-        
-    #     #revision si se encuentra sobre un condicion de borde ( no es posible abajo)
-    #     if (self._geografia[j-1,i] != 0) :
-    #         rij+= 2*self._matrix[j+1,i]
-    #         if self._geografia[j-1,i]==2:
-    #             rij+= 2*self.emision*(self._dh)**2
-    #     else:
-    #         rij+=(self._matrix[j-1,i]+self._matrix[j+1,i])
-
-    #     #revision de si se encuentra a izquierda o derecha de una condicion de borde (no es posible en ambos)
-    #     if self._geografia[j,i-1] !=0 :
-    #         rij+= 2*self._matrix[j,i+1]
-
-    #     elif self._geografia[j,i+1] !=0 :
-    #         rij+= 2*self._matrix[j,i-1]
-        
-    #     else:
-    #         rij+=(self._matrix[j,i-1] + self._matrix[j,i+1])
-
-    #     # print -rho(i*self._dh,j*self._dh)
-    #     rij+= -rho(i*self._dh/self.scale,j*self._dh/self.scale)*(self._dh**2)
-
-    #     uij+= self.omega*rij/4.0
-    #     e = abs(self._matrix[j,i] - uij)
-    #     return uij, e
-    
-
-    def faux2(self, i,j, rho = rho1, omega=1):
+    def faux(self, i,j, rho = rho1, omega=1):
 
 
         if (self._geografia[j-1,i] != 0):
@@ -335,7 +293,12 @@ class Litoral:
             rij = self._matrix[j+1,i] + self._matrix[j-1,i] + self._matrix[j,i+1] + self._matrix[j,i-1] - 4.0*self._matrix[j,i]  
 
         
-        rij = rij - rho(i*self._dh/self.scale, j*self._dh/self.scale)*(self._dh)**2.0
+        _x = abs(  int( (self.puntos["p1"][0]-self.puntos["p2"][0] )/2) - i)*(self._dh/self.scale)
+        _y = abs(1 - j)*(self._dh/self.scale)
+
+        _r = rho(_x, _y)*(self._dh)**2.0
+        rij = rij - _r
+        
         uij=  self._matrix[j,i] + omega*rij*0.25
         e = abs(self._matrix[j,i] - uij)
         return uij, e
@@ -353,10 +316,10 @@ class Litoral:
 
         hora = hora_string(self.hora)
         plt.title('Temperatura a las {0} horas'.format(hora))
-        self._fix_axes_sticks(ax)
+        self.__fix_axes_sticks(ax)
 
         if save:
-            fig.savefig('images/lintemp_'+str(self.hora)+'_'+str(self.last_omega)+'.png', bbox_inches='tight')
+            fig.savefig('images/temp_map/lintemp_'+str(self.hora)+'_'+str(self.last_omega), format='png', bbox_inches='tight')
             plt.close(fig)
         else:
             plt.show()
@@ -371,10 +334,12 @@ class Litoral:
         fig = plt.figure()
         ax = fig.add_subplot(111)
 
-        ymax = np.nanmax(self._matrix)
-        xmax = math.log(ymax,10)
+        # ymax = np.nanmax(self._matrix)
+        # xmax = math.log(ymax,10)
 
-        bounds = np.hstack((np.array([-10, 0]),np.logspace(1,xmax,25, endpoint=True)))
+        xmax = math.log(1350,10) #lim sup of plot
+
+        bounds = np.hstack((np.array([-10, 0]),np.logspace(1,xmax,50, endpoint=True)))
         norm = color.BoundaryNorm(boundaries=bounds, ncolors=256)
         # Se agrega grafico al plot
         cax = ax.imshow(self._matrix, interpolation='none', origin="lower", norm =norm)
@@ -383,10 +348,10 @@ class Litoral:
         hora = hora_string(self.hora)
         plt.title('Temperatura a las {0} horas (escala logaritmica)'.format(hora))
 
-        self._fix_axes_sticks(ax)
+        self.__fix_axes_sticks(ax)
 
         if save:
-            fig.savefig('images/logtemp_'+str(self.hora)+'_'+str(self.last_omega)+'.png', bbox_inches='tight')        
+            fig.savefig('images/temp_map/logtemp_'+str(self.hora)+'_'+str(self.last_omega), format='png', bbox_inches='tight')        
             plt.close(fig)
 
         else:
@@ -408,28 +373,40 @@ class Litoral:
         cb = fig.colorbar(cax,cmap=cmap, norm=norm, boundaries=bounds, ticks = [0.5,1.5,2.5,3.5,4.5])
         cb.ax.set_yticklabels(['cielo','agua' ,'fabrica', 'tierra','nieve'])
 
-        plt.title('Mapa del Litoral')
+        plt.title('Mapa del Litoral {0} x {1} '.format(self._w,self._h))
         
         if points:
             for key,value in self.puntos.iteritems():
                 plt.text(value[0], value[1], key.upper(), fontsize=12, color='blue', horizontalalignment='center' )
 
-        self._fix_axes_sticks(ax)
+        self.__fix_axes_sticks(ax)
         plt.show()    
         return 
 
 
     def estadisticas(self):
 
-        _min1 = np.min(self._matrix)
-        _max1 = np.max(self._matrix)
-        _mean1 = np.mean(self._matrix)
+        _min1 = np.nanmin(self._matrix)
+        _max1 = np.nanmax(self._matrix)
+        _mean1 = np.nanmean(self._matrix)
         return [_min1, _max1, _mean1]
-    
-    def imprime(self):
-        print(self._matrix)
 
-    def _fix_axes_sticks(self, ax):
+
+    def _plot_t_x(self):
+
+        temps = []
+        for i in range(self._w):
+            temps.append(np.nanmean(self._matrix[:,i]))
+
+        fig2 = plt.figure()
+        graph = plt.plot( range(self._w),temps, color='red', linestyle='-', linewidth=2, markersize=12,)
+        # plt.xlabel('Hora del Dia [hr]')
+        # plt.ylabel('Iteraciones')
+        # plt.title(r'Numero de iteraciones $\epsilon = 0.001$')
+        plt.show()
+
+
+    def __fix_axes_sticks(self, ax):
 
         xnum = len(ax.get_xticks()) - 2
         ynum = len(ax.get_yticks()) - 2
@@ -463,7 +440,25 @@ def hora_string(hr):
     return hora + ":" + minutos
 
 def get_omega_optimo(m, n):
-    a = 2.0 + math.sqrt( 4.0 - (math.cos(math.pi/(n-1.0)) + math.cos(math.pi/(m-1.0)))**2)      
+    a = 2.0 + math.sqrt( 4.0 - ( math.cos(math.pi/(n-1.0)) + math.cos(math.pi/(m-1.0)) )**2)      
     omega = 4.0/a
     print("Omega óptimo: "+str(omega))
     return omega
+
+def temp_chimenea(hora):
+    return 450*(math.cos((math.pi/12)*hora)+2)
+
+def temp_mar(hora):
+    hora = hora%24.0
+
+    if hora>=0.0 and hora<8.0:
+        M  = 4.0
+    elif hora>=8.0 and hora<16.0:
+        n = 4.0
+        m = (20.0-4.0)/(16.0-8.0)
+        M = m*(hora-8.0)+n
+    elif hora>=16.0:
+        n = 20.0
+        m = (4.0-20.0)/(24.0-16.0)
+        M = m*(hora-16.0)+n
+    return M
