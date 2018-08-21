@@ -69,7 +69,7 @@ module polyhedronestrella(){
     }
 }
 
-  module starmie(){
+module starmie(){
       union(){
           estrella();
           translate([0,0,-20])
@@ -81,5 +81,9 @@ module polyhedronestrella(){
       }  
     
  //translate([0,0,-20])     
- starmie();
- //base();
+starmie();
+//color([64/255,42/255,99/255])
+//estrella();
+
+//base();
+//parteestrella();

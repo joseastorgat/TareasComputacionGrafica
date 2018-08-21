@@ -28,7 +28,12 @@ module cara(ri,ep,rnariz, re){
         translate([-re/2.5,0,10]) ojo(re);
         
         translate([0,0,ep/2])
-        color([0,0,0])
+        tatuajefacial(re);
+    }
+}
+
+module tatuajefacial(re){
+    color([0,0,0])
         union(){
         difference(){
             circle(r=re/2.45, h=re/100, center=true);
@@ -42,10 +47,8 @@ module cara(ri,ep,rnariz, re){
             bola(posicion=[cos(i)*(re/2.5+ re/60), sin(i)*(re/2.5 + re/60),0], radio=re/15);
         }
         }
-    
-    
     }
-}
+
 module ojo(re){
     union(){
         color([1,1,1]) scale([1,2,1])   cylinder(h=re/10, r1=re/10 ,r2=re/10, center=true);
@@ -98,3 +101,4 @@ module bronzor(){
 }
 
 bronzor();
+

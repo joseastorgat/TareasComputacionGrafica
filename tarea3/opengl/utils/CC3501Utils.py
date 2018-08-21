@@ -23,6 +23,8 @@ class Vector:
         return atan2(self.y, self.x)
 
     def theta(self):
+        if self.modulo() == 0:
+            return 0
         return acos(self.z / self.modulo())
 
     def rho(self):
@@ -225,17 +227,17 @@ def cilindro(radio, altura, pos=Vector(0, 0, 0), precision=10):
     return
 
 
-def esfera(radio, pos=Vector(0, 0, 0), max_thetha = pi):
+def esfera(radio, pos=Vector(0, 0, 0), max_theta = pi, min_theta=0):
     """
     @ esfera: Genera los vertices para una esfera centrada en pos.
     """
 
     dtheta = 2 * pi / 20.0  # definicion
     dfi = 2 * pi / 20.0
-    theta = 0  # angulo que cae
+    theta = min_theta  # angulo que cae
     fi = 0  # angulo polar
 
-    while theta <= max_thetha - dtheta:
+    while theta <= max_theta - dtheta:
         while fi <= 2 * pi - dfi:
             p1 = sumar(VectorEsfericas(radio, fi, theta), pos)
             p2 = sumar(VectorEsfericas(radio, fi + dfi, theta), pos)
@@ -270,7 +272,6 @@ class Figura:
     def dibujar(self):
         glPushMatrix()
         glColor3fv(self.color)
-        glScale(5,5,5)
         glTranslatef(self.pos.x, self.pos.y, 0.0)
         glCallList(self.lista)
 

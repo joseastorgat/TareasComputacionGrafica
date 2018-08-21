@@ -77,7 +77,9 @@ module magneton(){
         }
     
     }
-magneton();
 
-// U();
+//magnemite();    
+magneton();
+//cuerpo();
+//U();
 //tornillo();

@@ -18,7 +18,13 @@ class Bronzor(Figura):
 
     def figura(self):
         #self.hoja()
+        glPushMatrix()
+        glScalef(10,10,10)
+        glRotate(90,0,1,0)
+        glRotate(180,0,0,1)
+
         self.cuerpo()
+        
         glPushMatrix()
         glTranslatef(0, self.re/2.5, self.ep/2)
         self.ojo()
@@ -31,6 +37,7 @@ class Bronzor(Figura):
 
         self.cara()
         self.espalda()
+        glPopMatrix()
 
     def cuerpo(self):
         glBegin(GL_TRIANGLES)
@@ -43,7 +50,7 @@ class Bronzor(Figura):
         for i in range(30, 331, 60) :
             esfera(radio=self.resf,  pos=Vector(math.cos(i*(math.pi/180))*self.re, math.sin(i*(math.pi/180))*self.re,0));
         glColor3f(30/255,100/255,110/255)
-        esfera(radio=self.rnariz, pos=Vector(0,0, self.ep/2), max_thetha = math.pi/2) #nariz
+        esfera(radio=self.rnariz, pos=Vector(0,0, self.ep/2), max_theta = math.pi/2) #nariz
         glEnd()
 
     def ojo(self):
@@ -101,36 +108,12 @@ class Bronzor(Figura):
     def espalda(self):
 
         glColor3f(60/255,140/255,180/255)
-        #glPushMatrix()
         glTranslatef(18,0,-self.ep/2-1)
         self.rama()
         self.rama(65, Vector(-10,30,0), 0.5)
         self.rama(65, Vector(-40,30,0), 0.5)
         self.rama(-65, Vector(-10,-30,0), 0.5)
         self.rama(-65, Vector(-40,-30,0), 0.5)
-
-        # glPushMatrix()
-        # glTranslatef(-10,-30,0)
-        # glRotate(-65,0,0,1)
-        # glScalef(0.5,0.5,0.5)
-        # self.rama()
-        # glPopMatrix()
-
-        # glPushMatrix()
-        # glTranslatef(-40,30,0)
-        # glRotate(65,0,0,1)
-        # glScalef(0.5,0.5,0.5)
-        # self.rama()
-        # glPopMatrix()
-
-        # glPushMatrix()
-        # glTranslatef(-40,-30,0)
-        # glRotate(-65,0,0,1)
-        # glScalef(0.5,0.5,0.5)
-        # self.rama()
-        # glPopMatrix()
-        # glPopMatrix()
-
 
     def cara(self):
         glColor3f(22/255,62/255,69/255)
